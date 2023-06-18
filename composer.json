@@ -17,7 +17,7 @@
     },
     "require": {
         "maxbanton/cwh": "^1.1",
-        "illuminate/support": "^5.1"
+        "illuminate/support": "^5.1 || ^6.0 || ^7.0 || ^8.0 || ^9.0"
     },
     "extra": {
         "laravel": {
@@ -29,7 +29,7 @@
     },
     "require-dev": {
         "friendsofphp/php-cs-fixer": "^2.12",
-        "phpunit/phpunit": "^6.5",
+        "phpunit/phpunit": "^6.5 || ^7.0 || ^8.0 || ^9.0",
         "mockery/mockery": "^1.2"
     }
 }
