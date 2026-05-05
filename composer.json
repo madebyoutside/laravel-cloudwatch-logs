@@ -9,14 +9,14 @@
             "email": "developer.naren@gmail.com"
         }
     ],
-    "autoload" : {
-      "psr-4" : {
-          "Pagevamp\\" : "src/",
-          "Tests\\": "tests/"
-      }
+    "autoload": {
+        "psr-4": {
+            "Pagevamp\\": "src/",
+            "Tests\\": "tests/"
+        }
     },
     "require": {
-        "maxbanton/cwh": "^1.1 || ^2.0.4",
+        "maxbanton/cwh": "^2.0.4 || ^3.0",
         "illuminate/support": "^5.1 || ^6.0 || ^7.0 || ^8.0 || ^9.0 || ^10.0"
     },
     "extra": {
@@ -24,7 +24,6 @@
             "providers": [
                 "Pagevamp\\Providers\\CloudWatchServiceProvider"
             ]
-
         }
     },
     "require-dev": {
