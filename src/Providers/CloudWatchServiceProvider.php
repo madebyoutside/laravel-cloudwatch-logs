@@ -13,7 +13,7 @@ class CloudWatchServiceProvider extends ServiceProvider
 {
     public function boot()
     {
-        if (!env('DISABLE_CLOUDWATCH_LOG')) {
+        if (!$this->isDisabled()) {
             $app = $this->app;
             $app['log']->listen(function () use ($app) {
                 $args = func_get_args();
@@ -29,10 +29,6 @@ class CloudWatchServiceProvider extends ServiceProvider
 		            $context = $args[2];
 	            }
 
-                if ($message instanceof \ErrorException) {
-                    return $this->getLogger()->log($level, $message, $context);
-                }
-
                 if ($app['cloudwatch.logger'] instanceof Logger) {
                     $app['cloudwatch.logger']->log($level, $message, $context);
                 }
@@ -45,13 +41,17 @@ class CloudWatchServiceProvider extends ServiceProvider
         $cwClient = new CloudWatchLogsClient($this->getCredentials());
         $loggingConfig = $this->app->make('config')->get('logging.channels.cloudwatch');
 
-        $streamName = $loggingConfig['stream_name'];
-        $retentionDays = $loggingConfig['retention'];
-        $groupName = $loggingConfig['group_name'];
-        $batchSize = isset($loggingConfig['batch_size']) ? $loggingConfig['batch_size'] : 10000;
+        $streamName = $this->requiredString($loggingConfig, 'stream_name');
+        $groupName = $this->requiredString($loggingConfig, 'group_name');
+        // Missing key keeps the cwh default (14 days); null or '' means no
+        // retention policy (logs never expire)
+        $retentionDays = array_key_exists('retention', $loggingConfig)
+            ? $this->optionalInt($loggingConfig, 'retention', null)
+            : 14;
+        $batchSize = $this->optionalInt($loggingConfig, 'batch_size', 10000);
 
         $logHandler = new CloudWatch($cwClient, $groupName, $streamName, $retentionDays, $batchSize);
-        $logger = new Logger($loggingConfig['name']);
+        $logger = new Logger((string) ($loggingConfig['name'] ?? ''));
 
         $formatter = $this->resolveFormatter($loggingConfig);
         $logHandler->setFormatter($formatter);
@@ -75,7 +75,7 @@ class CloudWatchServiceProvider extends ServiceProvider
             null, false, true
         );
 
-        if ($configs['formatter'] && class_exists($configs['formatter'])) {
+        if (($configs['formatter'] ?? null) && class_exists($configs['formatter'])) {
             $formatter = $this->app->make($configs['formatter']);
         }
 
@@ -89,16 +89,80 @@ class CloudWatchServiceProvider extends ServiceProvider
      */
     public function register()
     {
-        if (!env('DISABLE_CLOUDWATCH_LOG')) {
-            $this->mergeConfigFrom(
-                __DIR__.'/../../config/logging.php',
-                'logging.channels'
-            );
+        $this->mergeConfigFrom(
+            __DIR__.'/../../config/logging.php',
+            'logging.channels'
+        );
 
+        if (!$this->isDisabled()) {
             $this->app->singleton('cloudwatch.logger', function () {
                 return $this->getLogger();
             });
         }
+    }
+
+    /**
+     * The "disabled" key of the cloudwatch channel wins; without it falls back
+     * to env('DISABLE_CLOUDWATCH_LOG'), which returns null once the
+     * configuration is cached (php artisan config:cache).
+     *
+     * @return bool
+     */
+    protected function isDisabled()
+    {
+        $disabled = $this->app->make('config')->get('logging.channels.cloudwatch.disabled');
+
+        if (is_null($disabled)) {
+            $disabled = env('DISABLE_CLOUDWATCH_LOG');
+        }
+
+        return (bool) $disabled;
+    }
+
+    /**
+     * cwh 3 requires a non-empty string for group and stream names.
+     *
+     * @param array  $config
+     * @param string $key
+     *
+     * @return string
+     * @throws \Pagevamp\Exceptions\IncompleteCloudWatchConfig
+     */
+    private function requiredString(array $config, $key)
+    {
+        $value = $config[$key] ?? null;
+
+        if (!is_scalar($value) || '' === trim((string) $value)) {
+            throw new IncompleteCloudWatchConfig('Missing '.$key.' key-value');
+        }
+
+        return (string) $value;
+    }
+
+    /**
+     * cwh 3 types retention and batch size as int: numeric strings (from
+     * env()) are converted, null/'' use the default.
+     *
+     * @param array    $config
+     * @param string   $key
+     * @param int|null $default
+     *
+     * @return int|null
+     * @throws \Pagevamp\Exceptions\IncompleteCloudWatchConfig
+     */
+    private function optionalInt(array $config, $key, $default)
+    {
+        $value = $config[$key] ?? null;
+
+        if (is_null($value) || '' === $value) {
+            return $default;
+        }
+
+        if (!is_numeric($value)) {
+            throw new IncompleteCloudWatchConfig('Invalid '.$key.' value: must be a number');
+        }
+
+        return (int) $value;
     }
 
     /**
@@ -135,10 +199,17 @@ class CloudWatchServiceProvider extends ServiceProvider
             throw new IncompleteCloudWatchConfig('Missing region key-value');
         }
 
-        return $awsCredentials = [
+        $awsCredentials = [
             'region' => $cloudWatchConfigs['region'],
-            'version' => $cloudWatchConfigs['version'],
-            'credentials' => $cloudWatchConfigs['credentials'],
+            'version' => $cloudWatchConfigs['version'] ?? 'latest',
         ];
+
+        // Without credentials the AWS SDK uses its default provider chain
+        // (environment, IAM role, ...)
+        if (isset($cloudWatchConfigs['credentials'])) {
+            $awsCredentials['credentials'] = $cloudWatchConfigs['credentials'];
+        }
+
+        return $awsCredentials;
     }
 }

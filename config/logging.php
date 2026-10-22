@@ -2,6 +2,7 @@
 
 return [
     'cloudwatch' => [
+        'disabled' => env('DISABLE_CLOUDWATCH_LOG', false),
         'name' => env('CLOUDWATCH_LOG_NAME', ''),
         'region' => env('CLOUDWATCH_LOG_REGION', ''),
         'credentials' => [
