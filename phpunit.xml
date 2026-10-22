@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit bootstrap="vendor/autoload.php" colors="true" failOnRisky="true" failOnWarning="true" cacheDirectory=".phpunit.cache">
+  <testsuites>
+    <testsuite name="Laravel CloudWatch Logs Test Suite">
+      <directory suffix="Test.php">./tests</directory>
+    </testsuite>
+  </testsuites>
+  <source>
+    <include>
+      <directory suffix=".php">./src</directory>
+    </include>
+  </source>
+</phpunit>

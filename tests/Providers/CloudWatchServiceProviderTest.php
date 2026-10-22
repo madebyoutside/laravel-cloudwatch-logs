@@ -16,7 +16,7 @@ class CloudWatchServiceProviderTest extends \PHPUnit\Framework\TestCase
     {
         $cloudwatchConfigs = [
             'name' => '',
-            'region' => '',
+            'region' => 'us-east-1',
             'credentials' => [
                 'key' => '',
                 'secret' => '',
@@ -67,7 +67,7 @@ class CloudWatchServiceProviderTest extends \PHPUnit\Framework\TestCase
     {
         $cloudwatchConfigs = [
             'name' => '',
-            'region' => '',
+            'region' => 'us-east-1',
             'credentials' => [
                 'key' => '',
                 'secret' => '',

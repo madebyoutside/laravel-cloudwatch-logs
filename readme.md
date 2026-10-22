@@ -46,7 +46,3 @@ Pagevamp\Providers\CloudWatchServiceProvider::class
 ### Concept
 
 This package relies on laravel's listener for log events. This package DOES NOT replace the default logging, instead adds additional log to AWS CLoud Watch. Hence you do not have to change the default log driver to make this work.
-
-### Contribution
-
-I have added a `pre-commit` hook to run `php-cs-fixer` whenever you make a commit. To enable this run `sh hooks.sh`.
